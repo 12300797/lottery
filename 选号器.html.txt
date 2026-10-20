@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#ffffff">
+<meta name="format-detection" content="telephone=no">
+<title>选号器</title>
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  margin:0;
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  background:#f5f7fb;color:#1a1a1a;
+  display:flex;flex-direction:column;
+  height:100vh;height:100dvh;
+  overflow:hidden;
+  -webkit-user-select:none;user-select:none;
+  touch-action:manipulation;
+}
+header{
+  flex-shrink:0;background:#fff;
+  padding:calc(10px + env(safe-area-inset-top)) 16px 10px;
+  border-bottom:1px solid #eef1f6;
+}
+.title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+h1{font-size:18px;margin:0;font-weight:700}
+.ghost-btn{
+  border:none;background:#f0f3f8;color:#555;font-size:13px;
+  padding:7px 14px;border-radius:999px;cursor:pointer;
+}
+.ghost-btn:active{background:#e4e9f2}
+.tabs{display:flex;background:#f0f3f8;border-radius:12px;padding:4px;gap:4px}
+.tab{
+  flex:1;border:none;background:transparent;padding:9px 0;border-radius:9px;
+  font-size:14px;font-weight:600;color:#666;cursor:pointer;
+}
+.tab.active{background:#fff;color:#1a1a1a;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:0 16px 20px}
+.select-bar{
+  position:sticky;top:0;z-index:5;background:#f5f7fb;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 0 10px;gap:10px;
+}
+#selectInfo{font-size:13px;color:#666;font-variant-numeric:tabular-nums}
+.use-btn{
+  border:none;border-radius:999px;padding:8px 16px;font-size:13px;font-weight:600;
+  background:#e8ebf1;color:#aaa;cursor:not-allowed;white-space:nowrap;
+}
+.use-btn.ready{background:#1a1a1a;color:#fff;cursor:pointer}
+.section-title{font-size:13px;color:#888;margin:14px 0 10px;font-weight:600}
+.pool{display:flex;flex-wrap:wrap;gap:8px}
+.ball{
+  width:42px;height:42px;border-radius:50%;border:none;
+  font-size:15px;font-weight:600;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  padding:0;transition:transform .08s;
+}
+.ball:active{transform:scale(.92)}
+.ball.main{background:#fdeaea;color:#d32f2f}
+.ball.main.on{background:#d32f2f;color:#fff;box-shadow:0 3px 10px rgba(211,47,47,.35)}
+.ball.sub{background:#e7f1fd;color:#1565c0}
+.ball.sub.on{background:#1565c0;color:#fff;box-shadow:0 3px 10px rgba(21,101,192,.35)}
+footer{
+  flex-shrink:0;display:flex;gap:10px;
+  padding:10px 16px calc(10px + env(safe-area-inset-bottom));
+  background:#fff;border-top:1px solid #eef1f6;
+}
+.btn{
+  flex:1;border:none;border-radius:12px;padding:14px 0;
+  font-size:15px;font-weight:600;cursor:pointer;
+  background:#f0f3f8;color:#333;transition:transform .08s;
+}
+.btn:active{transform:scale(.98)}
+.btn.primary{background:#1a1a1a;color:#fff}
+.btn.result{flex:0 0 82px}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.block{width:100%}
+.sheet-mask{
+  position:fixed;inset:0;background:rgba(0,0,0,.45);
+  opacity:0;pointer-events:none;transition:opacity .25s;z-index:100;
+}
+.sheet-mask.show{opacity:1;pointer-events:auto}
+.sheet{
+  position:fixed;left:0;right:0;bottom:0;z-index:101;
+  background:#fff;border-radius:20px 20px 0 0;
+  transform:translateY(100%);
+  transition:transform .28s cubic-bezier(.32,.72,0,1);
+  display:flex;flex-direction:column;
+  max-height:82vh;max-height:82dvh;
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.sheet.show{transform:translateY(0)}
+.sheet-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px;border-bottom:1px solid #f2f4f8;flex-shrink:0;
+}
+.sheet-header strong{font-size:16px}
+.sheet-body{flex:1;overflow-y:auto;padding:12px 16px}
+.result-item{padding:10px 0;border-bottom:1px dashed #eef1f6}
+.result-item:last-child{border-bottom:none}
+.result-idx{font-size:12px;color:#999;margin-bottom:8px}
+.result-balls{display:flex;flex-wrap:wrap;gap:7px;align-items:center}
+.divider{width:6px}
+.mini{
+  width:34px;height:34px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:600;
+}
+.mini.main{background:#fdeaea;color:#d32f2f}
+.mini.sub{background:#e7f1fd;color:#1565c0}
+.sheet-footer{padding:12px 16px;border-top:1px solid #f2f4f8;flex-shrink:0}
+.empty{text-align:center;color:#aaa;padding:40px 0;font-size:14px}
+.toast{
+  position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);
+  background:rgba(0,0,0,.8);color:#fff;padding:10px 18px;border-radius:10px;
+  font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:200;
+  max-width:80%;text-align:center;
+}
+.toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="title-row">
+    <h1>选号器</h1>
+    <button id="clearBtn" class="ghost-btn">清空</button>
+  </div>
+  <div class="tabs">
+    <button class="tab active" data-type="ssq">双色球</button>
+    <button class="tab" data-type="dlt">大乐透</button>
+  </div>
+</header>
+
+<main>
+  <div class="select-bar">
+    <span id="selectInfo">红球 0/6 · 蓝球 0/1</span>
+    <button id="useManual" class="use-btn" disabled>采用手动</button>
+  </div>
+  <div class="section-title" id="mainTitle">红球</div>
+  <div id="mainPool" class="pool"></div>
+  <div class="section-title" id="subTitle">蓝球</div>
+  <div id="subPool" class="pool"></div>
+</main>
+
+<footer>
+  <button id="randomOne" class="btn primary">机选一注</button>
+  <button id="randomFive" class="btn">机选五注</button>
+  <button id="showResult" class="btn result" disabled>结果</button>
+</footer>
+
+<div class="sheet-mask" id="sheetMask"></div>
+<div class="sheet" id="sheet">
+  <div class="sheet-header">
+    <strong>选号结果</strong>
+    <button class="ghost-btn" id="closeSheet">关闭</button>
+  </div>
+  <div class="sheet-body" id="sheetBody"></div>
+  <div class="sheet-footer">
+    <button class="btn primary block" id="copyBtn">复制全部</button>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+const CONFIG = {
+  ssq: { mainName:'红球', mainMax:33, mainPick:6, subName:'蓝球', subMax:16, subPick:1 },
+  dlt: { mainName:'前区', mainMax:35, mainPick:5, subName:'后区', subMax:12, subPick:2 }
+};
+
+let currentType = 'ssq';
+let selMain = new Set();
+let selSub = new Set();
+let results = [];
+
+const $ = id => document.getElementById(id);
+const range = (s, e) => Array.from({ length: e - s + 1 }, (_, i) => s + i);
+const pad = n => String(n).padStart(2, '0');
+
+function shuffle(a) {
+  a = [...a];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+function pick(max, n) {
+  return shuffle(range(1, max)).slice(0, n).sort((a, b) => a - b);
+}
+function genOne() {
+  const c = CONFIG[currentType];
+  return { main: pick(c.mainMax, c.mainPick), sub: pick(c.subMax, c.subPick) };
+}
+
+let toastTimer;
+function flash(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 1400);
+}
+
+function renderPools() {
+  const c = CONFIG[currentType];
+  $('mainTitle').textContent = `${c.mainName}（选 ${c.mainPick} 个）`;
+  $('subTitle').textContent = `${c.subName}（选 ${c.subPick} 个）`;
+
+  const mp = $('mainPool');
+  mp.innerHTML = '';
+  for (let n = 1; n <= c.mainMax; n++) {
+    const b = document.createElement('button');
+    b.className = 'ball main' + (selMain.has(n) ? ' on' : '');
+    b.textContent = pad(n);
+    b.onclick = () => toggle('main', n);
+    mp.appendChild(b);
+  }
+
+  const sp = $('subPool');
+  sp.innerHTML = '';
+  for (let n = 1; n <= c.subMax; n++) {
+    const b = document.createElement('button');
+    b.className = 'ball sub' + (selSub.has(n) ? ' on' : '');
+    b.textContent = pad(n);
+    b.onclick = () => toggle('sub', n);
+    sp.appendChild(b);
+  }
+  updateBar();
+}
+
+function toggle(which, n) {
+  const c = CONFIG[currentType];
+  const set = which === 'main' ? selMain : selSub;
+  const max = which === 'main' ? c.mainPick : c.subPick;
+  const name = which === 'main' ? c.mainName : c.subName;
+
+  if (set.has(n)) set.delete(n);
+  else {
+    if (set.size >= max) { flash(`${name}最多选 ${max} 个`); return; }
+    set.add(n);
+  }
+  renderPools();
+}
+
+function updateBar() {
+  const c = CONFIG[currentType];
+  $('selectInfo').textContent =
+    `${c.mainName} ${selMain.size}/${c.mainPick} · ${c.subName} ${selSub.size}/${c.subPick}`;
+
+  const full = selMain.size === c.mainPick && selSub.size === c.subPick;
+  const useBtn = $('useManual');
+  useBtn.disabled = !full;
+  useBtn.classList.toggle('ready', full);
+
+  const showBtn = $('showResult');
+  showBtn.disabled = !results.length;
+  showBtn.textContent = results.length ? `结果 ${results.length}` : '结果';
+}
+
+function renderSheet() {
+  const c = CONFIG[currentType];
+  const body = $('sheetBody');
+  if (!results.length) {
+    body.innerHTML = '<div class="empty">还没有选号</div>';
+    return;
+  }
+  body.innerHTML = results.map((item, i) => {
+    const mains = item.main.map(n => `<span class="mini main">${pad(n)}</span>`).join('');
+    const subs = item.sub.map(n => `<span class="mini sub">${pad(n)}</span>`).join('');
+    return `<div class="result-item">
+      <div class="result-idx">第 ${i + 1} 注</div>
+      <div class="result-balls">${mains}<span class="divider"></span>${subs}</div>
+    </div>`;
+  }).join('');
+}
+
+function openSheet() {
+  renderSheet();
+  $('sheet').classList.add('show');
+  $('sheetMask').classList.add('show');
+}
+function closeSheet() {
+  $('sheet').classList.remove('show');
+  $('sheetMask').classList.remove('show');
+}
+
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.onclick = () => {
+    if (currentType === btn.dataset.type) return;
+    currentType = btn.dataset.type;
+    document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x === btn));
+    selMain.clear();
+    selSub.clear();
+    results = [];
+    closeSheet();
+    renderPools();
+  };
+});
+
+$('randomOne').onclick = () => {
+  results = [genOne()];
+  updateBar();
+  openSheet();
+};
+
+$('randomFive').onclick = () => {
+  results = Array.from({ length: 5 }, genOne);
+  updateBar();
+  openSheet();
+};
+
+$('useManual').onclick = () => {
+  const c = CONFIG[currentType];
+  if (selMain.size !== c.mainPick || selSub.size !== c.subPick) return;
+  results = [{
+    main: [...selMain].sort((a, b) => a - b),
+    sub: [...selSub].sort((a, b) => a - b)
+  }];
+  updateBar();
+  openSheet();
+};
+
+$('clearBtn').onclick = () => {
+  selMain.clear();
+  selSub.clear();
+  results = [];
+  renderPools();
+  closeSheet();
+  flash('已清空');
+};
+
+$('showResult').onclick = openSheet;
+$('closeSheet').onclick = closeSheet;
+$('sheetMask').onclick = closeSheet;
+
+$('copyBtn').onclick = () => {
+  if (!results.length) return;
+  const c = CONFIG[currentType];
+  const text = results.map((item, i) =>
+    `第${i + 1}注 ${c.mainName}：${item.main.map(pad).join(' ')}  ${c.subName}：${item.sub.map(pad).join(' ')}`
+  ).join('\n');
+  copyText(text);
+};
+
+function copyText(text) {
+  const fallback = () => {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try {
+      document.execCommand('copy');
+      flash('已复制');
+    } catch (e) {
+      flash('复制失败，请长按选择');
+    }
+    document.body.removeChild(ta);
+  };
+
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(() => flash('已复制'), fallback);
+  } else {
+    fallback();
+  }
+}
+
+renderPools();
+</script>
+</body>
+</html>
